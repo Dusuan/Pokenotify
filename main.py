@@ -4,7 +4,7 @@ import random
 import logging
 from typing import Dict
 from config import config, logger
-from alerts.twilio_client import send_whatsapp
+from alerts import dispatch_alert
 from scrapers.amazon import scan_amazon
 from scrapers.costco import scan_costco
 from scrapers.models import ScrapedItem
@@ -59,9 +59,9 @@ def run_monitor_cycle(alert_history: Dict[str, float]):
             )
             continue
 
-        # Enviar alerta por WhatsApp
+        # Enviar alerta (Telegram, Discord, CallMeBot WhatsApp o Twilio)
         msg = item.to_whatsapp_message()
-        success = send_whatsapp(msg)
+        success = dispatch_alert(msg)
         if success:
             alert_history[item.url] = now
             logger.info(f"¡Alerta despachada para {item.title[:40]}...!")
