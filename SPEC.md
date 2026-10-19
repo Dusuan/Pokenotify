@@ -10,11 +10,11 @@ Este documento es la fuente única de verdad para los requerimientos, la arquite
 ---
 
 ## 2. Arquitectura del Sistema
-- **Tipo de Aplicación**: Proceso demonio / Worker en segundo plano (bucle infinito con intervalos aleatorios/jitter).
+- **Tipo de Aplicación**: Proceso demonio / Worker en segundo plano (bucle infinito con intervalos aleatorios/jitter y cooldown anti-spam).
 - **Lenguaje y Entorno**: Python 3.11 (`python:3.11-slim`).
 - **Contenedor**: Docker + Docker Compose.
 - **Librerías Clave**:
-  - `requests`: Peticiones HTTP sincrónicas configuradas con cabeceras de emulación de navegador.
+  - `requests`: Peticiones HTTP sincrónicas configuradas con cabeceras de emulación de navegador y rotación de User-Agents.
   - `beautifulsoup4` (`bs4`): Parseo y extracción de datos del árbol DOM HTML.
   - `twilio`: Integración oficial con la API REST de Twilio WhatsApp.
   - `python-dotenv`: Carga de configuración y credenciales desde archivos `.env`.
@@ -57,19 +57,22 @@ Este documento es la fuente única de verdad para los requerimientos, la arquite
              Siguiente Iteración
 ```
 
-1. **Inicialización**: Lectura de variables de entorno y validación de credenciales Twilio.
+1. **Inicialización**: Lectura de variables de entorno y validación de credenciales Twilio (con fallback en modo log si no están definidas).
 2. **Ciclo de Inspección (Costco México)**:
-   - Consulta el endpoint o página de catálogo de Pokémon.
-   - Analiza los resultados: descarta ítems agotados (`out-of-stock`), valida títulos relevantes y precio vs umbral MSRP.
+   - Consulta el catálogo de Pokémon en Costco México.
+   - Detecta tarjetas de producto, descarta ítems agotados (`out-of-stock`), valida títulos relevantes y evalúa precio vs umbral MSRP.
+   - Maneja códigos HTTP 403 (WAF Akamai) y 503 sin interrumpir la ejecución.
 3. **Ciclo de Inspección (Amazon México)**:
-   - Itera sobre la lista de ASINs configurados.
+   - Itera sobre los ASINs configurados en `AMAZON_ASINS`.
    - Extrae disponibilidad (`#availability`), precio (`.a-price`) y vendedor (`#merchant-info`).
-   - Descarta revendedores/scalpers que inflen el precio sobre el MSRP.
-4. **Despacho de Alertas**:
+   - Descarta revendedores que inflen el precio sobre el MSRP.
+   - Maneja bloqueos WAF (403), sobrecargas (503) y retos CAPTCHA.
+4. **Despacho de Alertas y Cooldown**:
    - Si se detecta producto disponible con precio objetivo, se envía notificación detallada por WhatsApp con link directo de compra.
-   - Sistema de deduplicación/cooldown para no spamear la misma alerta en cada ciclo.
-5. **Espera Adaptativa**:
-   - Duerme durante un intervalo parametrizable con jitter aleatorio para prevenir bloqueos por WAF.
+   - Cuenta con una caché de cooldown (1 hora por defecto) para evitar re-enviar la misma alerta repetitivamente mientras haya stock.
+5. **Espera Adaptativa y Señales**:
+   - Duerme durante un intervalo parametrizable con jitter aleatorio (`+ / - 10s`).
+   - Atrapa `SIGINT` y `SIGTERM` para apagado controlado y limpio.
 
 ---
 
@@ -93,14 +96,14 @@ El bot requiere ejecutarse como un **Worker persistente 24/7** (un proceso conti
 
 | Plataforma | Soporte Worker Continuo Gratuito | Requiere Puerto HTTP | Limitaciones / Consideraciones de Capa Gratuita | Recomendación |
 |---|---|---|---|---|
-| **Render** | ❌ No en Free Tier para Background Workers | Sí (en Web Services) | Los *Background Workers* en Render son únicamente de pago (\$7 USD/mes min). Los *Web Services* gratuitos se suspenden tras 15 min sin tráfico web entrante y tienen límite de 750 horas/mes de computación compartida. Para correr en Render Free se requeriría un hack exponiendo un mini servidor web (Flask/FastAPI) y un ping externo (UptimeRobot). | No recomendado salvo con workaround HTTP |
-| **Oracle Cloud (OCI)** | ✅ Sí (Always Free) | ❌ No | Ofrece hasta 4 OCPUs y 24 GB de RAM en instancias ARM Ampere A1 (o 2 instancias AMD Micro de 1 GB) completamente gratis para siempre. Permite correr Docker y systemd sin restricciones. | **Opción Nube #1 (Recomendada)** |
-| **Fly.io** | ⚠️ Parcial / Limitado | ❌ No | La capa gratuita histórica ha cambiado a modelo de pago por uso con crédito o planes de \$5/mes. Sin embargo, permite máquinas suspendidas y requiere registrar tarjeta. Si se agotan los créditos, suspende las VMs. | Opción secundaria |
-| **Despliegue Local (Linux / Hyprland / K8s)** | ✅ Excelente y 100% bajo control | ❌ No | El usuario ya cuenta con entorno Linux, Hyprland y Kubernetes local. Ejecutar el contenedor mediante `docker-compose` en segundo plano (`-d`) o en un cluster k3s/microk8s local no genera costos, no sufre suspensiones por inactividad y permite inspeccionar logs al instante. | **Opción Inmediata y más confiable para desarrollo y uso diario** |
+| **Render** | ❌ No en Free Tier para Background Workers | Sí (en Web Services) | Los *Background Workers* en Render son exclusivamente de pago (\$7 USD/mes mínimo). Los *Web Services* gratuitos se suspenden tras 15 minutos sin peticiones HTTP entrantes y tienen un límite de 750 horas/mes compartidas. Correrlo gratis en Render requeriría añadir un mini-servidor HTTP (e.g. FastAPI / Flask) y un servicio de ping externo (como UptimeRobot o Cron-Job.org), lo cual añade complejidad innecesaria. | No recomendado salvo con workaround HTTP |
+| **Oracle Cloud (OCI)** | ✅ Sí (Always Free) | ❌ No | Ofrece hasta 4 OCPUs y 24 GB de RAM en instancias ARM Ampere A1 (o 2 instancias AMD Micro de 1 GB) completamente gratis para siempre. Permite correr Docker y systemd sin restricciones ni suspensiones de inactividad. | **Opción Nube #1 (Recomendada si se desea hostear fuera de casa)** |
+| **Fly.io** | ⚠️ Parcial / Limitado | ❌ No | Requiere tarjeta de crédito para registrarse. El esquema de free tier cambió a créditos mensuales limitados y suspende máquinas inactivas o cuando se consumen las cuotas. | Opción secundaria |
+| **Despliegue Local (Linux / Hyprland / K8s)** | ✅ Excelente y 100% bajo control | ❌ No | El usuario ya cuenta con entorno Linux, Hyprland y Kubernetes local. Ejecutar el contenedor mediante `docker-compose up -d` en segundo plano o como Deployment de K8s no genera costos, no sufre suspensiones por inactividad y permite inspeccionar logs de inmediato con `docker-compose logs -f`. | **Opción Inmediata y más confiable para desarrollo y uso diario** |
 
 **Conclusión y Hoja de Ruta de Despliegue:**
-1. **Entorno Primario / Local**: Correr mediante Docker Compose / Kubernetes local con reinicio automático (`restart: unless-stopped`).
-2. **Entorno Nube Gratuito 24/7**: Si se requiere dejar la máquina local apagada, desplegar la imagen Docker en una instancia **Oracle Cloud Always Free (ARM Ampere / Ubuntu Linux)** mediante Docker y systemd.
+1. **Entorno Primario / Local**: Correr mediante Docker Compose (`docker-compose up -d --build`) o Kubernetes local con reinicio automático (`restart: unless-stopped`).
+2. **Entorno Nube Gratuito 24/7**: Si se requiere dejar la máquina local apagada, desplegar el contenedor en una VM **Oracle Cloud Always Free (ARM Ampere / Ubuntu Linux)** mediante Docker y systemd.
 
 ---
 
@@ -112,13 +115,13 @@ El bot requiere ejecutarse como un **Worker persistente 24/7** (un proceso conti
 - [x] Estrategia de despliegue investigada y documentada.
 
 ### Fase 2: Implementación de Código
-- [ ] Dependencias y manejo de entorno (`requirements.txt`, `.env.example`, `config.py`).
-- [ ] Módulo de alertas Twilio WhatsApp (`alerts/twilio_client.py`).
-- [ ] Scraper de Amazon México (`scrapers/amazon.py`).
-- [ ] Scraper de Costco México (`scrapers/costco.py`).
-- [ ] Orquestador / Loop principal (`main.py`).
+- [x] Dependencias y manejo de entorno (`requirements.txt`, `.env.example`, `config.py`).
+- [x] Módulo de alertas Twilio WhatsApp (`alerts/twilio_client.py`).
+- [x] Scraper de Amazon México con manejo de WAF (`scrapers/amazon.py`).
+- [x] Scraper de Costco México con catálogo y detección de stock (`scrapers/costco.py`).
+- [x] Orquestador / Loop principal con jitter, cooldown y señales (`main.py`).
 
 ### Fase 3: Contenerización
-- [ ] `Dockerfile` optimizado (`python:3.11-slim`, `PYTHONUNBUFFERED=1`).
-- [ ] `docker-compose.yml` para despliegue y variables de entorno.
-- [ ] Pruebas locales y verificación de ejecución.
+- [x] `Dockerfile` optimizado (`python:3.11-slim`, `PYTHONUNBUFFERED=1`, usuario no root).
+- [x] `docker-compose.yml` para despliegue y variables de entorno.
+- [x] Pruebas locales y verificación de ejecución.
