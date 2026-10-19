@@ -21,21 +21,21 @@ Este documento mantiene un registro cronológico del progreso, decisiones tomada
 - **Fase 3 (Contenerización)**:
   - Creación de `Dockerfile` basado en `python:3.11-slim`, activando `PYTHONUNBUFFERED=1` y configurando usuario no privilegiado (`appuser`).
   - Creación de `docker-compose.yml` para levantar el worker con inyección de variables de entorno y reinicio automático (`build: dockeriza la aplicacion de monitoreo`).
-- **Fase 4 (Estrategia de Despliegue & Guías de Setup)**:
-  - Análisis comparativo exhaustivo documentado en `SPEC.md` evaluando Render (Free tier descarta background workers directos sin puerto HTTP), Oracle Cloud Always Free (opción recomendada para hosting cloud 24/7 gratuito sin límites de worker) y entorno local del usuario (Docker Compose / K8s sobre Linux).
-  - Guía detallada en `REFERENCES.md` para configuración de variables `.env` con Twilio WhatsApp API (Sandbox vs Business Sender oficial).
-  - Guía paso a paso en `REFERENCES.md` para despliegue en AWS Cloud (EC2 Free Tier t2/t3.micro con Docker y Docker Compose).
+- **Fase 4 (Despliegue Always Free en GCP & Telegram API)**:
+  - Soporte integrado para **Telegram Bot API** (100% permanente y continuo gratuito para mensajes push al celular).
+  - Configuración y despliegue en **Google Cloud Platform (GCP)** sobre instancia `e2-micro` (Always Free permanente en `us-central1` con disco estándar de 30 GB).
+  - Verificación del ciclo CI/CD manual vía Git Pull y Docker Compose para actualizaciones de lógica de scraping.
 
 **Qué está en progreso:**
-- Configuración de credenciales de Twilio en el archivo `.env` del usuario y provisión de instancia en AWS Cloud.
+- Ejecución continua del bot en segundo plano dentro de la VM de GCP monitoreando Costco y Amazon México.
 
 **Bloqueos:**
 - Ninguno.
 
 **Próximos pasos en orden de prioridad:**
-1. Crear el archivo `.env` local o en la instancia EC2 con `TWILIO_SID`, `TWILIO_AUTH`, `TWILIO_FROM` y `TWILIO_TO`.
-2. Lanzar la instancia EC2 t2/t3.micro en AWS Free Tier e instalar Docker.
-3. Iniciar el servicio con `docker compose up -d --build`.
+1. Verificar recepción de la primera alerta de prueba en Telegram.
+2. Afinar selectores o agregar nuevos ASINs de Pokémon TCG en `.env` según demanda de mercado.
+3. Actualizar la lógica con `git push` local y `git pull && docker-compose up -d --build` en la VM cuando se requieran ajustes de scraping.
 
 ---
 *(Las sesiones futuras se registrarán en orden cronológico inverso, sobreescribiendo la sección del día si ya existe).*
