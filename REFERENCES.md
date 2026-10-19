@@ -97,3 +97,71 @@ def send_whatsapp_alert(account_sid: str, auth_token: str, from_number: str, to_
         logging.error(f"Error al enviar alerta por Twilio WhatsApp: {e}")
         return False
 ```
+
+---
+
+## 5. Guía de Configuración: Twilio WhatsApp API
+
+Existen dos modalidades para utilizar la API de Twilio WhatsApp:
+
+### Opción A: Twilio WhatsApp Sandbox (Recomendada para Alertas Personales)
+Ideal para uso individual o desarrollo sin tramitar aprobación de marca con Meta.
+1. Crear cuenta gratuita en [twilio.com](https://www.twilio.com/).
+2. Ir a **Develop > Messaging > Try it out > Send a WhatsApp message**.
+3. Notarás un número asignado (ej. `+1 415 523 8886`) y un código de vinculación único (ej. `join <palabra-clave>`).
+4. Desde tu teléfono personal de WhatsApp, envía el mensaje `join <palabra-clave>` al número asignado de Twilio para autorizar la recepción de alertas.
+5. Obtener los valores para `.env`:
+   - `TWILIO_SID`: Visible en la consola principal de Twilio (**Account SID**, empieza con `AC...`).
+   - `TWILIO_AUTH`: Visible en la consola principal de Twilio (**Auth Token**).
+   - `TWILIO_FROM`: `whatsapp:+14155238886` (número del sandbox).
+   - `TWILIO_TO`: `whatsapp:+521XXXXXXXXXX` (tu número en formato E.164 con código de país).
+
+### Opción B: Twilio WhatsApp Sender Propio (Producción)
+Requiere cuenta empresarial de Meta (Facebook Business Manager):
+1. En Twilio Console: **Messaging > Senders > WhatsApp Senders**.
+2. Solicitar un "WhatsApp Business Profile".
+3. Verificar tu empresa en Meta Business Manager y registrar un número de teléfono exclusivo (que no tenga WhatsApp activo en la app normal).
+4. El `TWILIO_FROM` será tu número aprobado: `whatsapp:+52XXXXXXXXXX`.
+
+---
+
+## 6. Guía de Despliegue en AWS Cloud (EC2 Free Tier)
+
+Para mantener el worker corriendo 24/7 en AWS de forma gratuita:
+
+1. **Lanzar Instancia**:
+   - En la consola de AWS EC2, seleccionar **Launch Instance**.
+   - Nombre: `pokenotify-worker`.
+   - AMI: **Amazon Linux 2023** o **Ubuntu 22.04 LTS** (Ambas aptas para Free Tier).
+   - Tipo de Instancia: `t2.micro` (o `t3.micro` según región elegible).
+   - Key Pair: Crear y descargar archivo `.pem` para conexión SSH.
+   - Security Group: Solo puerto `22` (SSH) restringido a tu IP. No requiere puertos web abiertos.
+2. **Conexión SSH**:
+   ```bash
+   chmod 400 mi-llave.pem
+   ssh -i mi-llave.pem ec2-user@<IP_PUBLICA_EC2>   # en Amazon Linux
+   # o: ssh -i mi-llave.pem ubuntu@<IP_PUBLICA_EC2>    # en Ubuntu
+   ```
+3. **Instalación de Docker y Docker Compose**:
+   ```bash
+   # Amazon Linux 2023
+   sudo dnf update -y
+   sudo dnf install -y docker git
+   sudo systemctl enable --now docker
+   sudo usermod -aG docker $USER
+   # Instalar Docker Compose v2
+   sudo mkdir -p /usr/local/lib/docker/cli-plugins
+   sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+   sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+   newgrp docker
+   ```
+4. **Despliegue del Proyecto**:
+   ```bash
+   git clone <URL_DE_TU_REPOSITORIO> pokenotify
+   cd pokenotify
+   cp .env.example .env
+   nano .env   # colocar credenciales de Twilio
+   docker compose up -d --build
+   docker compose logs -f
+   ```
+
