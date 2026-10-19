@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  pokenotify:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pokenotify-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      # Fallbacks si no están en .env
+      - CHECK_INTERVAL_SECONDS=${CHECK_INTERVAL_SECONDS:-90}
+      - MAX_MSRP_PRICE_MXN=${MAX_MSRP_PRICE_MXN:-1600.0}
