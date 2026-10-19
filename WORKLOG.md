@@ -21,10 +21,10 @@ Este documento mantiene un registro cronológico del progreso, decisiones tomada
 - **Fase 3 (Contenerización)**:
   - Creación de `Dockerfile` basado en `python:3.11-slim`, activando `PYTHONUNBUFFERED=1` y configurando usuario no privilegiado (`appuser`).
   - Creación de `docker-compose.yml` para levantar el worker con inyección de variables de entorno y reinicio automático (`build: dockeriza la aplicacion de monitoreo`).
-- **Fase 4 (Despliegue Always Free en GCP & Telegram API)**:
+- **Fase 4 (Despliegue Always Free en GCP, Telegram API & README)**:
   - Soporte integrado para **Telegram Bot API** (100% permanente y continuo gratuito para mensajes push al celular).
   - Configuración y despliegue en **Google Cloud Platform (GCP)** sobre instancia `e2-micro` (Always Free permanente en `us-central1` con disco estándar de 30 GB).
-  - Verificación del ciclo CI/CD manual vía Git Pull y Docker Compose para actualizaciones de lógica de scraping.
+  - Creación de [README.md](file:///c:/Users/XxDus/Documents/Pokenotify/README.md) documentando la arquitectura, la guía paso a paso de actualización continua (CI/CD manual) y comandos de mantenimiento de Docker.
 
 **Qué está en progreso:**
 - Ejecución continua del bot en segundo plano dentro de la VM de GCP monitoreando Costco y Amazon México.
