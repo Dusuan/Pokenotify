@@ -59,8 +59,8 @@ class CostcoScraper:
                 relative_url = title_elem.get("href", "")
                 product_url = urljoin(COSTCO_BASE_URL, relative_url)
 
-                # Descartar si el título no menciona Pokemon o cartas
-                if "pokemon" not in title.lower() and "pokémon" not in title.lower():
+                # Filtrar rigurosamente para que sean únicamente cartas Pokémon TCG (y no Legos, peluches o videojuegos)
+                if not config.is_tcg_product(title):
                     continue
 
                 # Estado de inventario
