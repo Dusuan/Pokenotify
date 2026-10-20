@@ -1,13 +1,100 @@
+import re
 import logging
 import requests
 from bs4 import BeautifulSoup
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from config import config
 from .models import ScrapedItem
 from .utils import get_random_headers, parse_price
 from .pricing import evaluate_product_msrp
 
 logger = logging.getLogger("Pokenotify.Amazon")
+
+
+def extract_amazon_seller_info(soup: BeautifulSoup) -> Tuple[str, str, bool]:
+    """
+    Extrae con precisión el vendedor y remitente en Amazon México.
+    Retorna (seller_name, shipper_name, is_official_amazon).
+    """
+    seller_name = ""
+    shipper_name = ""
+
+    # 1. Analizar el buybox tabular (#tabular-buybox)
+    tabular_box = soup.select_one("#tabular-buybox, #desktop_buybox, #buybox, #rightCol")
+    if tabular_box:
+        for row in tabular_box.select(".tabular-buybox-row, div.tabular-buybox-container > div, tr"):
+            row_text = row.get_text().strip()
+            row_lower = row_text.lower()
+            if "vendido por" in row_lower or "sold by" in row_lower:
+                val_elem = row.select_one("span.tabular-buybox-text-message, a#sellerProfileTriggerId, a")
+                if val_elem:
+                    seller_name = val_elem.get_text(strip=True)
+                else:
+                    parts = re.split(r"vendido por|sold by", row_text, flags=re.IGNORECASE)
+                    if len(parts) > 1:
+                        seller_name = parts[1].strip()
+            elif any(w in row_lower for w in ["envía desde", "envia desde", "envío desde", "remitente", "ships from"]):
+                val_elem = row.select_one("span.tabular-buybox-text-message, a")
+                if val_elem:
+                    shipper_name = val_elem.get_text(strip=True)
+
+    # 2. Si no se encontró en filas, buscar enlace directo del perfil de vendedor
+    if not seller_name:
+        seller_link = soup.select_one("#sellerProfileTriggerId")
+        if seller_link:
+            seller_name = seller_link.get_text(strip=True)
+
+    # 3. Analizar el bloque clásico #merchant-info
+    merchant_info = soup.select_one("#merchant-info")
+    if merchant_info:
+        m_text = merchant_info.get_text(strip=True)
+        m_lower = m_text.lower()
+        if "vendido y enviado por amazon" in m_lower:
+            seller_name = "Amazon México"
+            shipper_name = "Amazon México"
+        elif "vendido por" in m_lower:
+            parts = re.split(r"vendido por", m_text, flags=re.IGNORECASE)
+            if len(parts) > 1:
+                sub = parts[1].split(".")[0].split("y enviado")[0].strip()
+                if not seller_name:
+                    seller_name = sub
+        elif not seller_name:
+            seller_name = m_text
+
+    # 4. Búsqueda por expresiones regulares en el texto de la página
+    page_text = soup.get_text()
+    if not seller_name:
+        match = re.search(r'(?:Vendido por|Sold by)\s*[:]?\s*([A-Za-z0-9áéíóúÁÉÍÓÚ\s\.\-]{2,40})', page_text, re.IGNORECASE)
+        if match:
+            seller_name = match.group(1).strip()
+
+    # 5. Detección fallback de Amazon
+    page_text_lower = page_text.lower()
+    if not seller_name or seller_name.lower() in ("desconocido", ""):
+        if "vendido y enviado por amazon" in page_text_lower or "vendido por amazon méxico" in page_text_lower:
+            seller_name = "Amazon México"
+        elif "vendido por amazon estados unidos" in page_text_lower or "amazon ee.uu." in page_text_lower:
+            seller_name = "Amazon Estados Unidos"
+        else:
+            seller_name = "Desconocido"
+
+    if len(seller_name) > 60:
+        seller_name = seller_name[:57] + "..."
+
+    seller_lower = seller_name.lower()
+    is_official_amazon = (
+        "amazon méxico" in seller_lower
+        or "amazon mexico" in seller_lower
+        or "amazon estados unidos" in seller_lower
+        or "amazon ee.uu." in seller_lower
+        or "amazon us" in seller_lower
+        or "amazon export" in seller_lower
+        or "amazon.com.mx" in seller_lower
+        or seller_lower == "amazon"
+        or "amazon" in shipper_name.lower()
+    )
+
+    return seller_name, shipper_name, is_official_amazon
 
 
 class AmazonScraper:
@@ -86,11 +173,18 @@ class AmazonScraper:
 
             price_val = parse_price(price_str)
 
-            # Extracción del vendedor (Merchant)
-            merchant_elem = soup.select_one("#merchant-info") or soup.select_one("#tabular-buybox")
-            seller = merchant_elem.get_text(strip=True) if merchant_elem else "Desconocido"
-            if len(seller) > 100:
-                seller = seller[:97] + "..."
+            # Extracción del vendedor (Merchant) y remitente
+            seller, shipper, is_official_amazon = extract_amazon_seller_info(soup)
+
+            # Filtro opcional: Solo vendedores oficiales de Amazon (descarta vendedores aleatorios/scalpers)
+            if config.amazon_only_official_seller and not is_official_amazon:
+                logger.info(
+                    f"[Amazon] ASIN {asin} ('{title[:30]}...') descartado: "
+                    f"Vendedor '{seller}' es un tercero no oficial (se busca Amazon México)."
+                )
+                return None
+
+            seller_display = f"{seller} (Oficial ✅)" if is_official_amazon else seller
 
             # Validación de MSRP dinámico por tipo de producto (+15% de colchón)
             msrp_eval = evaluate_product_msrp(
@@ -108,7 +202,7 @@ class AmazonScraper:
                 url=url,
                 in_stock=in_stock,
                 is_msrp=is_msrp,
-                seller=seller,
+                seller=seller_display,
                 notes=f"ASIN: {asin}",
                 category_name=msrp_eval["category_name"],
                 msrp_usd=msrp_eval["msrp_usd"],

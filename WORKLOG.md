@@ -17,6 +17,7 @@ Este documento mantiene un registro cronológico del progreso, decisiones tomada
 - Implementación de filtro inteligente de TCG en `config.py` y `scrapers/costco.py` con lista blanca de términos de cartas (ETB, booster, tin, colección, sobres) y lista negra de exclusión (Legos, Mega Construx, peluches, videojuegos, ropa).
 - Implementación del módulo de precios dinámicos `scrapers/pricing.py` con tabla oficial de MSRPs en USD para todas las categorías (ETB, Booster Box, UPC, Blisters, Tins, etc.), consulta y caché del tipo de cambio USD/MXN en tiempo real, y cálculo automático con colchón porcentual configurable actualizado al +25% (`MSRP_CUSHION_PERCENT=25.0`), estableciendo el tope de alerta para ETBs en ~$1,153 MXN para capturar compras ventajosas en $1,100 MXN.
 - Regla estricta de idioma implementada en `config.py`, `scrapers/amazon.py` y `scrapers/costco.py`: filtro que descarta automáticamente cualquier producto o carta en idioma Español (`español`, `spanish`, `castellano`, etc.), garantizando alertas exclusivas para cartas Pokémon TCG en idioma Inglés.
+- Extracción precisa de vendedor/remitente en Amazon México (`extract_amazon_seller_info`) y filtro estricto opcional `AMAZON_ONLY_OFFICIAL_SELLER=true` para garantizar alertas exclusivamente de productos vendidos/enviados por Amazon México u oficial, descartando revendedores aleatorios.
 
 **Qué está en progreso:**
 - Monitoreo continuo 24/7 en la VM de Google Cloud Platform (GCP).
