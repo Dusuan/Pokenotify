@@ -5,6 +5,7 @@ from typing import Optional, List
 from config import config
 from .models import ScrapedItem
 from .utils import get_random_headers, parse_price
+from .pricing import evaluate_product_msrp
 
 logger = logging.getLogger("Pokenotify.Amazon")
 
@@ -80,10 +81,13 @@ class AmazonScraper:
             if len(seller) > 100:
                 seller = seller[:97] + "..."
 
-            # Validación de MSRP
-            is_msrp = False
-            if in_stock and price_val is not None:
-                is_msrp = price_val <= config.max_msrp_price
+            # Validación de MSRP dinámico por tipo de producto (+15% de colchón)
+            msrp_eval = evaluate_product_msrp(
+                title=title,
+                actual_price=price_val,
+                default_max_msrp=config.max_msrp_price
+            )
+            is_msrp = in_stock and msrp_eval["is_valid_deal"]
 
             item = ScrapedItem(
                 store="Amazon México",
@@ -94,12 +98,18 @@ class AmazonScraper:
                 in_stock=in_stock,
                 is_msrp=is_msrp,
                 seller=seller,
-                notes=f"ASIN: {asin}"
+                notes=f"ASIN: {asin}",
+                category_name=msrp_eval["category_name"],
+                msrp_usd=msrp_eval["msrp_usd"],
+                msrp_mxn=msrp_eval["msrp_mxn"],
+                max_allowed_mxn=msrp_eval["max_allowed_mxn"],
             )
 
             logger.info(
                 f"[Amazon] ASIN {asin}: {'EN STOCK' if in_stock else 'Agotado'} | "
-                f"Precio: {price_str or 'N/A'} | MSRP válido: {is_msrp}"
+                f"Tipo: {msrp_eval['category_name']} | "
+                f"Precio: {price_str or 'N/A'} (Tope +15%: ${msrp_eval['max_allowed_mxn']:,.0f} MXN) | "
+                f"MSRP válido: {is_msrp}"
             )
             return item
 

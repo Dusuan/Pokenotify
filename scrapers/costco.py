@@ -6,6 +6,7 @@ from urllib.parse import urljoin
 from config import config
 from .models import ScrapedItem
 from .utils import get_random_headers, parse_price
+from .pricing import evaluate_product_msrp
 
 logger = logging.getLogger("Pokenotify.Costco")
 
@@ -77,14 +78,13 @@ class CostcoScraper:
                 price_str = price_elem.get_text(strip=True) if price_elem else ""
                 price_val = parse_price(price_str)
 
-                # Validación de MSRP
-                is_msrp = False
-                if in_stock:
-                    if price_val is not None:
-                        is_msrp = price_val <= config.max_msrp_price
-                    else:
-                        # Si no pudimos parsear el precio pero está en stock, alertar con precaución
-                        is_msrp = True
+                # Validación de MSRP dinámico por tipo de producto (+15% colchón)
+                msrp_eval = evaluate_product_msrp(
+                    title=title,
+                    actual_price=price_val,
+                    default_max_msrp=config.max_msrp_price
+                )
+                is_msrp = in_stock and (msrp_eval["is_valid_deal"] if price_val is not None else True)
 
                 item = ScrapedItem(
                     store="Costco México",
@@ -95,13 +95,19 @@ class CostcoScraper:
                     in_stock=in_stock,
                     is_msrp=is_msrp,
                     seller="Costco México Oficial",
-                    notes="Socio Costco / Compra sujeta a membresía"
+                    notes="Socio Costco / Compra sujeta a membresía",
+                    category_name=msrp_eval["category_name"],
+                    msrp_usd=msrp_eval["msrp_usd"],
+                    msrp_mxn=msrp_eval["msrp_mxn"],
+                    max_allowed_mxn=msrp_eval["max_allowed_mxn"],
                 )
                 items.append(item)
 
                 logger.info(
-                    f"[Costco] '{title[:40]}...': {'EN STOCK' if in_stock else 'Agotado'} | "
-                    f"Precio: {price_str or 'N/A'} | MSRP: {is_msrp}"
+                    f"[Costco] '{title[:35]}...': {'EN STOCK' if in_stock else 'Agotado'} | "
+                    f"Tipo: {msrp_eval['category_name']} | "
+                    f"Precio: {price_str or 'N/A'} (Tope +15%: ${msrp_eval['max_allowed_mxn']:,.0f} MXN) | "
+                    f"MSRP: {is_msrp}"
                 )
 
         except requests.RequestException as e:

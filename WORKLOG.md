@@ -15,6 +15,7 @@ Este documento mantiene un registro cronológico del progreso, decisiones tomada
 - Ejecución y verificación exitosa de prueba de notificación con entrega real a Telegram.
 - Documentación del flujo de pruebas en `README.md` y actualización del template `.env.example`.
 - Implementación de filtro inteligente de TCG en `config.py` y `scrapers/costco.py` con lista blanca de términos de cartas (ETB, booster, tin, colección, sobres) y lista negra de exclusión (Legos, Mega Construx, peluches, videojuegos, ropa).
+- Implementación del módulo de precios dinámicos `scrapers/pricing.py` con tabla oficial de MSRPs en USD para todas las categorías (ETB, Booster Box, UPC, Blisters, Tins, etc.), consulta y caché del tipo de cambio USD/MXN en tiempo real, y cálculo automático del tope con colchón de +15%.
 
 **Qué está en progreso:**
 - Monitoreo continuo 24/7 en la VM de Google Cloud Platform (GCP).
