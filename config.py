@@ -40,6 +40,7 @@ class Config:
     # Parámetros del monitor
     check_interval: int = int(os.getenv("CHECK_INTERVAL_SECONDS", "90"))
     max_msrp_price: float = float(os.getenv("MAX_MSRP_PRICE_MXN", "1600.0"))
+    send_startup_test_alert: bool = os.getenv("SEND_STARTUP_TEST_ALERT", "true").strip().lower() in ("true", "1", "yes")
     amazon_asins: List[str] = None
 
     def __post_init__(self):

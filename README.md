@@ -60,6 +60,23 @@ Si solo quieres:
 
 ---
 
+### 3. ¿Cómo probar que las notificaciones funcionan?
+
+Puedes probar que las alertas lleguen correctamente a tu teléfono en cualquier momento:
+
+- **En tu servidor GCP con Docker:**
+  ```bash
+  docker-compose exec pokenotify python test_alert.py
+  ```
+- **En tu máquina local:**
+  ```bash
+  python test_alert.py
+  ```
+- **Prueba automática al iniciar:**
+  Por defecto, cada vez que el contenedor arranca o se reinicia (`docker-compose restart`), envía un mensaje de confirmación a tu Telegram para asegurar que la conexión está activa. *(Si deseas apagar este mensaje de arranque, puedes poner `SEND_STARTUP_TEST_ALERT=false` en tu `.env`)*.
+
+---
+
 ## 📋 Comandos de Mantenimiento Frecuentes
 
 | Acción | Comando |

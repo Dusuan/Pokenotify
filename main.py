@@ -1,6 +1,7 @@
 import time
 import signal
 import random
+import sys
 import logging
 from typing import Dict
 from config import config, logger
@@ -8,6 +9,7 @@ from alerts import dispatch_alert
 from scrapers.amazon import scan_amazon
 from scrapers.costco import scan_costco
 from scrapers.models import ScrapedItem
+from test_alert import send_test_notification
 
 # Control de terminación graciosa (Graceful shutdown)
 running = True
@@ -77,6 +79,16 @@ def main():
     logger.info("Iniciando Pokenotify - Bot de Monitoreo TCG (Costco & Amazon México)")
     logger.info(f"Intervalo base configurado: {config.check_interval}s | Precio MSRP Máx: ${config.max_msrp_price} MXN")
     logger.info(f"ASINs de Amazon monitoreados: {', '.join(config.amazon_asins)}")
+
+    # Modo de prueba directa si se pasa el flag --test-alert
+    if "--test-alert" in sys.argv:
+        logger.info("Modo de prueba manual activado (--test-alert).")
+        send_test_notification()
+        return
+
+    # Envío de prueba al arrancar el contenedor si está habilitado
+    if config.send_startup_test_alert:
+        send_test_notification()
 
     alert_history: Dict[str, float] = {}
 

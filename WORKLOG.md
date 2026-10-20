@@ -6,6 +6,27 @@ Este documento mantiene un registro cronológico del progreso, decisiones tomada
 
 ---
 
+## Sesión: 2026-10-20 (Verificación de Alertas y Test Suite)
+
+**Qué implementamos en esta sesión:**
+- Creación del script de prueba `test_alert.py` para verificar notificaciones directamente a Telegram sin esperar ciclos de stock.
+- Integración de alerta de confirmación automática en `main.py` al arrancar el contenedor (`SEND_STARTUP_TEST_ALERT=true`).
+- Soporte para flag manual `--test-alert` en `main.py`.
+- Ejecución y verificación exitosa de prueba de notificación con entrega real a Telegram.
+- Documentación del flujo de pruebas en `README.md` y actualización del template `.env.example`.
+
+**Qué está en progreso:**
+- Monitoreo continuo 24/7 en la VM de Google Cloud Platform (GCP).
+
+**Bloqueos:**
+- Ninguno.
+
+**Próximos pasos en orden de prioridad:**
+1. En la VM de GCP, ejecutar `git pull && docker-compose up -d --build` para actualizar el contenedor con el ping de confirmación al arranque.
+2. Agregar nuevos ASINs de Pokémon TCG en `.env` conforme salgan preventas de nuevos sets.
+
+---
+
 ## Sesión: 2026-10-19 (Fases 1, 2, 3 y 4: Implementación Completa y Despliegue)
 
 **Qué implementamos en esta sesión:**
