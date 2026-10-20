@@ -110,13 +110,26 @@ def get_usd_to_mxn_rate() -> float:
     return _cached_rate or DEFAULT_FALLBACK_RATE
 
 
-def evaluate_product_msrp(title: str, actual_price: Optional[float], default_max_msrp: float = 1600.0) -> Dict:
+def evaluate_product_msrp(
+    title: str,
+    actual_price: Optional[float],
+    default_max_msrp: float = 1600.0,
+    cushion_percent: Optional[float] = None
+) -> Dict:
     """
     Identifica la categoría del producto TCG a partir del título, calcula el MSRP en MXN
-    con el tipo de cambio actual y aplica un colchón del +15%.
+    con el tipo de cambio actual y aplica un colchón porcentual (por defecto +20% configurable).
     
     :return: Diccionario con detalles de categorización, precios y si califica como MSRP válido.
     """
+    if cushion_percent is None:
+        try:
+            from config import config
+            cushion_percent = config.msrp_cushion_percent
+        except Exception:
+            cushion_percent = 20.0
+
+    cushion_factor = 1.0 + (cushion_percent / 100.0)
     t = title.lower()
     matched_category = None
 
@@ -133,12 +146,12 @@ def evaluate_product_msrp(title: str, actual_price: Optional[float], default_max
     if matched_category:
         cat_id, cat_name, msrp_usd = matched_category
         msrp_mxn = msrp_usd * usd_rate
-        # Colchón del 15% sobre el precio MSRP
-        max_allowed_mxn = msrp_mxn * 1.15
+        # Colchón porcentual sobre el precio MSRP base
+        max_allowed_mxn = msrp_mxn * cushion_factor
     else:
         # Si no encaja en una categoría exacta, usar ETB como referencia estándar
         cat_name = "Producto TCG General"
-        msrp_usd = default_max_msrp / (usd_rate * 1.15)
+        msrp_usd = default_max_msrp / (usd_rate * cushion_factor)
         msrp_mxn = msrp_usd * usd_rate
         max_allowed_mxn = default_max_msrp
 
@@ -151,7 +164,7 @@ def evaluate_product_msrp(title: str, actual_price: Optional[float], default_max
         "msrp_usd": msrp_usd,
         "msrp_mxn": msrp_mxn,
         "usd_rate": usd_rate,
-        "cushion_percent": 15,
+        "cushion_percent": cushion_percent,
         "max_allowed_mxn": max_allowed_mxn,
         "is_valid_deal": is_valid_deal,
     }
