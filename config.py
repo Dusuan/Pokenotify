@@ -40,7 +40,7 @@ class Config:
     # Parámetros del monitor
     check_interval: int = int(os.getenv("CHECK_INTERVAL_SECONDS", "90"))
     max_msrp_price: float = float(os.getenv("MAX_MSRP_PRICE_MXN", "1600.0"))
-    msrp_cushion_percent: float = float(os.getenv("MSRP_CUSHION_PERCENT", "20.0"))
+    msrp_cushion_percent: float = float(os.getenv("MSRP_CUSHION_PERCENT", "25.0"))
     send_startup_test_alert: bool = os.getenv("SEND_STARTUP_TEST_ALERT", "true").strip().lower() in ("true", "1", "yes")
     amazon_asins: List[str] = None
     tcg_keywords: List[str] = None

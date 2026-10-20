@@ -118,7 +118,7 @@ def evaluate_product_msrp(
 ) -> Dict:
     """
     Identifica la categoría del producto TCG a partir del título, calcula el MSRP en MXN
-    con el tipo de cambio actual y aplica un colchón porcentual (por defecto +20% configurable).
+    con el tipo de cambio actual y aplica un colchón porcentual (por defecto +25% configurable).
     
     :return: Diccionario con detalles de categorización, precios y si califica como MSRP válido.
     """
@@ -127,7 +127,7 @@ def evaluate_product_msrp(
             from config import config
             cushion_percent = config.msrp_cushion_percent
         except Exception:
-            cushion_percent = 20.0
+            cushion_percent = 25.0
 
     cushion_factor = 1.0 + (cushion_percent / 100.0)
     t = title.lower()
