@@ -48,6 +48,17 @@ class AmazonScraper:
             title_elem = soup.select_one("#productTitle")
             title = title_elem.get_text(strip=True) if title_elem else f"Producto Amazon ({asin})"
 
+            # Validar idioma y relevancia (SOLO cartas en inglés, descartar español y juguetes)
+            bullets_elem = soup.select_one("#feature-bullets") or soup.select_one("#detailBullets_feature_div")
+            extra_details = bullets_elem.get_text(strip=True).lower() if bullets_elem else ""
+
+            if not config.is_tcg_product(title, extra_text=extra_details):
+                logger.info(
+                    f"[Amazon] ASIN {asin} ('{title[:35]}...') descartado: "
+                    f"No es TCG en inglés o se detectó idioma español."
+                )
+                return None
+
             # Extracción de disponibilidad
             availability_elem = soup.select_one("#availability")
             availability_text = availability_elem.get_text(strip=True).lower() if availability_elem else ""

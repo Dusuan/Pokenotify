@@ -60,12 +60,11 @@ class CostcoScraper:
                 relative_url = title_elem.get("href", "")
                 product_url = urljoin(COSTCO_BASE_URL, relative_url)
 
-                # Filtrar rigurosamente para que sean únicamente cartas Pokémon TCG (y no Legos, peluches o videojuegos)
-                if not config.is_tcg_product(title):
-                    continue
-
-                # Estado de inventario
                 card_text = card.get_text().lower()
+
+                # Filtrar rigurosamente: cartas TCG, exclusiones (Legos/peluches) y SOLO idioma inglés (no español)
+                if not config.is_tcg_product(title, extra_text=card_text):
+                    continue
                 is_out_of_stock = (
                     "agotado" in card_text
                     or "out of stock" in card_text

@@ -59,22 +59,32 @@ class Config:
         raw_exclude = os.getenv("TCG_EXCLUDE_KEYWORDS", default_exclude)
         self.tcg_exclude_keywords = [k.strip().lower() for k in raw_exclude.split(",") if k.strip()]
 
-    def is_tcg_product(self, title: str) -> bool:
-        """Determina si un producto es específicamente cartas Pokémon TCG y no juguetes/legos/ropa."""
-        t = title.lower()
+        # Indicadores de idioma Español (ESTRICTAMENTE DESCARTADOS: solo se permiten cartas en Inglés)
+        default_spanish = "español,espanol,spanish,idioma español,en español,versión en español,version en espanol,edición en español,edicion en espanol,castellano"
+        raw_spanish = os.getenv("SPANISH_LANGUAGE_KEYWORDS", default_spanish)
+        self.spanish_keywords = [k.strip().lower() for k in raw_spanish.split(",") if k.strip()]
 
-        # 1. Descartar si contiene palabras de productos no deseados
-        for exc in self.tcg_exclude_keywords:
-            if exc in t:
+    def is_tcg_product(self, title: str, extra_text: str = "") -> bool:
+        """Determina si un producto es cartas Pokémon TCG y EXCLUSIVAMENTE en idioma INGLÉS."""
+        combined = f"{title} {extra_text}".lower()
+
+        # 1. REGLA ESTRICTA: Descartar si está en idioma Español
+        for sp in self.spanish_keywords:
+            if sp in combined:
                 return False
 
-        # 2. Debe mencionar Pokémon
-        if "pokemon" not in t and "pokémon" not in t:
+        # 2. Descartar si contiene palabras de productos no deseados (lego, peluche, etc.)
+        for exc in self.tcg_exclude_keywords:
+            if exc in combined:
+                return False
+
+        # 3. Debe mencionar Pokémon
+        if "pokemon" not in combined and "pokémon" not in combined:
             return False
 
-        # 3. Debe contener al menos un término específico de cartas / TCG
+        # 4. Debe contener al menos un término específico de cartas / TCG
         for kw in self.tcg_keywords:
-            if kw in t:
+            if kw in combined:
                 return True
 
         return False
