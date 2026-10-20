@@ -82,19 +82,30 @@ def extract_amazon_seller_info(soup: BeautifulSoup) -> Tuple[str, str, bool]:
         seller_name = seller_name[:57] + "..."
 
     seller_lower = seller_name.lower()
-    is_official_amazon = (
-        "amazon méxico" in seller_lower
-        or "amazon mexico" in seller_lower
-        or "amazon estados unidos" in seller_lower
-        or "amazon ee.uu." in seller_lower
+    shipper_lower = shipper_name.lower()
+
+    # Detección de importación de Amazon Estados Unidos / Export
+    is_amazon_us = (
+        "estados unidos" in seller_lower
+        or "ee.uu" in seller_lower
+        or "ee. uu." in seller_lower
         or "amazon us" in seller_lower
-        or "amazon export" in seller_lower
-        or "amazon.com.mx" in seller_lower
-        or seller_lower == "amazon"
-        or "amazon" in shipper_name.lower()
+        or "export sales" in seller_lower
+        or "estados unidos" in shipper_lower
+        or "ee.uu" in shipper_lower
     )
 
-    return seller_name, shipper_name, is_official_amazon
+    # Debe ser estrictamente Amazon México (no terceros, no Amazon EE.UU.)
+    is_amazon_mexico = not is_amazon_us and (
+        "amazon méxico" in seller_lower
+        or "amazon mexico" in seller_lower
+        or "amazon.com.mx" in seller_lower
+        or "amazon méxico" in shipper_lower
+        or "amazon mexico" in shipper_lower
+        or (seller_lower == "amazon" and "estados unidos" not in shipper_lower)
+    )
+
+    return seller_name, shipper_name, is_amazon_mexico
 
 
 class AmazonScraper:
@@ -174,17 +185,17 @@ class AmazonScraper:
             price_val = parse_price(price_str)
 
             # Extracción del vendedor (Merchant) y remitente
-            seller, shipper, is_official_amazon = extract_amazon_seller_info(soup)
+            seller, shipper, is_amazon_mexico = extract_amazon_seller_info(soup)
 
-            # Filtro opcional: Solo vendedores oficiales de Amazon (descarta vendedores aleatorios/scalpers)
-            if config.amazon_only_official_seller and not is_official_amazon:
+            # Filtro estricto: Solo vendedor y remitente oficial Amazon México (descarta terceros y Amazon EE.UU.)
+            if config.amazon_only_official_seller and not is_amazon_mexico:
                 logger.info(
                     f"[Amazon] ASIN {asin} ('{title[:30]}...') descartado: "
-                    f"Vendedor '{seller}' es un tercero no oficial (se busca Amazon México)."
+                    f"Vendedor '{seller}' / Remitente '{shipper}' no es específicamente 'Amazon México'."
                 )
                 return None
 
-            seller_display = f"{seller} (Oficial ✅)" if is_official_amazon else seller
+            seller_display = f"{seller} (Amazon México Oficial ✅)" if is_amazon_mexico else seller
 
             # Validación de MSRP dinámico por tipo de producto (+15% de colchón)
             msrp_eval = evaluate_product_msrp(
