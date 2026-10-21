@@ -20,8 +20,82 @@ class ScrapedItem:
     msrp_mxn: Optional[float] = None
     max_allowed_mxn: Optional[float] = None
 
+    def get_clean_headline(self) -> str:
+        """
+        Extrae un encabezado limpio y directo con el nombre real del set o caja
+        (ej: 'Pitch Black (ETB)' o '30th Anniversary (ETB)') para que sea lo primero
+        visible en el banner de la notificación en el celular.
+        """
+        s = self.title.strip()
+        # 1. Limpiar prefijos de franquicia / Pokémon Center
+        s = re.sub(
+            r"^(?:Pok[eé]mon(?:\s+Center)?(?:\s+TCG|\s+JCC|\s+Trading\s+Card\s+Game)?)\s*[:\-–]\s*",
+            "",
+            s,
+            flags=re.IGNORECASE,
+        )
+        # 2. Limpiar eras comunes si están al inicio
+        s = re.sub(
+            r"^(?:Scarlet\s*&\s*Violet|Sword\s*&\s*Shield|Sun\s*&\s*Moon|Black\s*&\s*White|Escarlata\s*y\s*P[uú]rpura)\s*[:\-–]\s*",
+            "",
+            s,
+            flags=re.IGNORECASE,
+        )
+
+        # Obtener acrónimo o tipo corto
+        category = (self.category_name or "").upper()
+        if "PC_ETB" in category or "POKEMON CENTER" in category:
+            short_type = "PC ETB"
+        elif "ETB" in category or "ELITE TRAINER" in category:
+            short_type = "ETB"
+        elif "BOOSTER DISPLAY" in category or "BOOSTER BOX" in category:
+            short_type = "Booster Box"
+        elif "BOOSTER BUNDLE" in category:
+            short_type = "Booster Bundle"
+        elif "UPC" in category or "ULTRA PREMIUM" in category:
+            short_type = "UPC"
+        elif "MINI TIN" in category:
+            short_type = "Mini Tin"
+        elif "TIN" in category:
+            short_type = "Tin"
+        elif "BLISTER" in category:
+            short_type = "3-Pack Blister"
+        elif "BUILD" in category:
+            short_type = "Build & Battle"
+        else:
+            short_type = self.category_name or "TCG"
+
+        # Caso A: El título empieza con el tipo ('ETB Pitch Black', 'Elite Trainer Box - 30th Anniversary')
+        type_at_start = re.match(
+            r"^(?:Caja\s+)?(?:Elite\s+Trainer\s+Box|ETB|Booster\s+Bundle|Booster\s+Display\s+Box|Booster\s+Box|Ultra\s+Premium\s+Collection|UPC|Mini\s+Tin|Tin)\s*[:\-–]?\s*(.*)$",
+            s,
+            re.IGNORECASE,
+        )
+        if type_at_start:
+            remainder = type_at_start.group(1).strip()
+            remainder = re.sub(r"\s*Pok[eé]mon.*$", "", remainder, flags=re.IGNORECASE).strip()
+            if remainder:
+                return f"{remainder} ({short_type})"
+
+        # Caso B: El título termina con el tipo ('Pitch Black Elite Trainer Box', '30th Anniversary ETB')
+        type_at_end = re.search(
+            r"^(.*?)\s*[-–:]?\s*(?:Elite\s+Trainer\s+Box|ETB|Booster\s+Bundle|Booster\s+Display\s+Box|Booster\s+Box|Ultra\s+Premium\s+Collection|UPC|Mini\s+Tin|Tin)(?:\s*.*)?$",
+            s,
+            re.IGNORECASE,
+        )
+        if type_at_end:
+            set_name = type_at_end.group(1).strip()
+            set_name = re.sub(r"^(?:Pok[eé]mon|TCG)\s*[:\-–]?\s*", "", set_name, flags=re.IGNORECASE).strip()
+            if set_name:
+                return f"{set_name} ({short_type})"
+
+        # Fallback: Nombre simplificado
+        cleaned = re.sub(r"\s*Pok[eé]mon.*$", "", s, flags=re.IGNORECASE).strip()
+        return f"{cleaned[:35]} ({short_type})"
+
     def to_whatsapp_message(self) -> str:
         """Formatea el producto encontrado en un mensaje atractivo para Telegram/WhatsApp."""
+        headline = self.get_clean_headline()
         price_display = self.price_str if self.price_str else "No especificado"
         seller_display = f"\n🏪 *Vendido por:* {self.seller}" if self.seller else ""
         category_display = f"\n🏷️ *Tipo:* {self.category_name}" if self.category_name else ""
@@ -36,7 +110,8 @@ class ScrapedItem:
         notes_display = f"\n📌 *Nota:* {self.notes}" if self.notes else ""
 
         return (
-            f"🚨 *¡ALERTA DE STOCK TCG POKÉMON!* 🚨\n\n"
+            f"🔥 *{headline.upper()}* 🔥\n"
+            f"🚨 *¡STOCK DETECTADO A MSRP!* 🚨\n\n"
             f"🛒 *Tienda:* {self.store}\n"
             f"📦 *Producto:* {self.title}"
             f"{category_display}\n"

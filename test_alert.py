@@ -13,9 +13,11 @@ from alerts import dispatch_alert
 def send_test_notification() -> bool:
     """Envía un mensaje de prueba para verificar conectividad con los canales de notificación."""
     test_msg = (
+        "🔥 *PITCH BLACK (ETB)* 🔥\n"
         "🧪 *¡PRUEBA DE NOTIFICACIÓN DE POKENOTIFY!* 🧪\n\n"
         "✅ Tus notificaciones están funcionando correctamente.\n"
         f"⏱️ Intervalo base: {config.check_interval}s\n"
+        f"⏳ Cooldown entre alertas: {config.alert_cooldown_hours:.1f} horas\n"
         f"💰 MSRP Máx: ${config.max_msrp_price:,.2f} MXN\n"
         f"📦 ASINs de Amazon monitoreados: {len(config.amazon_asins)}\n\n"
         "⚡ *Función Direct 1-Click Link Activada:*\n"

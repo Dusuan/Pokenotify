@@ -15,7 +15,8 @@ from test_alert import send_test_notification
 running = True
 
 # Cooldown para evitar spam de alertas (URL -> timestamp del último envío)
-ALERT_COOLDOWN_SECONDS = 3600  # 1 hora antes de volver a alertar el mismo ítem
+# Por defecto 12 horas para productos que permanecen disponibles continuamente
+ALERT_COOLDOWN_SECONDS = int(config.alert_cooldown_hours * 3600)
 
 
 def handle_shutdown(signum, frame):
@@ -78,7 +79,10 @@ def run_monitor_cycle(alert_history: Dict[str, float]):
 
 def main():
     logger.info("Iniciando Pokenotify - Bot de Monitoreo TCG (Costco & Amazon México)")
-    logger.info(f"Intervalo base configurado: {config.check_interval}s | Precio MSRP Máx: ${config.max_msrp_price} MXN")
+    logger.info(
+        f"Intervalo base: {config.check_interval}s | Cooldown de alertas: {config.alert_cooldown_hours:.1f}h | "
+        f"Precio MSRP Máx: ${config.max_msrp_price} MXN"
+    )
     logger.info(f"ASINs de Amazon monitoreados: {', '.join(config.amazon_asins)}")
 
     # Modo de prueba directa si se pasa el flag --test-alert

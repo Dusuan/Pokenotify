@@ -19,7 +19,9 @@ Este documento mantiene un registro cronológico del progreso, decisiones tomada
 - Regla estricta de idioma implementada en `config.py`, `scrapers/amazon.py` y `scrapers/costco.py`: filtro que descarta automáticamente cualquier producto o carta en idioma Español (`español`, `spanish`, `castellano`, etc.), garantizando alertas exclusivas para cartas Pokémon TCG en idioma Inglés.
 - Extracción precisa de vendedor/remitente en Amazon México (`extract_amazon_seller_info`) y filtro estricto `AMAZON_ONLY_OFFICIAL_SELLER=true` ajustado para garantizar alertas exclusivamente de productos vendidos/enviados específicamente por Amazon México (descartando revendedores terceros e importaciones de Amazon EE.UU.).
 - Integración de botones interactivos Inline Keyboard en Telegram (`alerts/notifier.py`) con URLs Direct 1-Click (`scrapers/models.py`) que permiten añadir al carrito y abrir checkout instantáneo en la App oficial de Amazon con 1 solo toque.
-- Verificación exitosa en vivo del envío de botones interactivos mediante `test_alert.py`.
+- Configuración de cooldown de alertas ampliado a 12 horas (`ALERT_COOLDOWN_HOURS=12.0` en `config.py` y `main.py`) para evitar spam repetitivo en productos que permanecen en stock de forma continua.
+- Implementación de `get_clean_headline` en `scrapers/models.py` para extraer de forma inteligente el nombre real de la caja o set (ej: `PITCH BLACK (ETB)`, `30TH ANNIVERSARY (ETB)`) y ubicarlo en la primerísima línea del mensaje para lectura instantánea en el banner de notificaciones del celular.
+- Verificación exitosa en vivo de la nueva estructura de alerta mediante `test_alert.py`.
 
 **Qué está en progreso:**
 - Monitoreo continuo 24/7 en la VM de Google Cloud Platform (GCP).
