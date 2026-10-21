@@ -8,8 +8,8 @@ from .twilio_client import send_whatsapp as send_twilio_whatsapp
 logger = logging.getLogger("Pokenotify.Alerts")
 
 
-def send_telegram_alert(message_text: str) -> bool:
-    """Envía alerta vía Telegram Bot API (100% Plan Continuo Gratuito)."""
+def send_telegram_alert(message_text: str, buttons: Optional[list] = None) -> bool:
+    """Envía alerta vía Telegram Bot API con soporte para Inline Keyboard (100% Plan Continuo Gratuito)."""
     if not config.telegram_bot_token or not config.telegram_chat_id:
         return False
 
@@ -20,6 +20,9 @@ def send_telegram_alert(message_text: str) -> bool:
         "parse_mode": "Markdown",
         "disable_web_page_preview": False,
     }
+
+    if buttons:
+        payload["reply_markup"] = {"inline_keyboard": buttons}
 
     try:
         res = requests.post(url, json=payload, timeout=10)
@@ -77,16 +80,16 @@ def send_callmebot_whatsapp(message_text: str) -> bool:
         return False
 
 
-def dispatch_alert(message_text: str) -> bool:
+def dispatch_alert(message_text: str, buttons: Optional[list] = None) -> bool:
     """
     Despacha la alerta a todos los canales gratuitos y configurados.
     Si no hay ninguno configurado, simula la alerta en logs.
     """
     sent_any = False
 
-    # 1. Telegram Bot (Gratis de por vida)
+    # 1. Telegram Bot (Gratis de por vida) - Soporta botones interactivos Inline Keyboard
     if config.telegram_bot_token and config.telegram_chat_id:
-        if send_telegram_alert(message_text):
+        if send_telegram_alert(message_text, buttons=buttons):
             sent_any = True
 
     # 2. Discord Webhook (Gratis de por vida)

@@ -61,9 +61,10 @@ def run_monitor_cycle(alert_history: Dict[str, float]):
             )
             continue
 
-        # Enviar alerta (Telegram, Discord, CallMeBot WhatsApp o Twilio)
+        # Enviar alerta (Telegram, Discord, CallMeBot WhatsApp o Twilio) con botones de acción directa
         msg = item.to_whatsapp_message()
-        success = dispatch_alert(msg)
+        buttons = item.get_action_buttons()
+        success = dispatch_alert(msg, buttons=buttons)
         if success:
             alert_history[item.url] = now
             logger.info(f"¡Alerta despachada para {item.title[:40]}...!")

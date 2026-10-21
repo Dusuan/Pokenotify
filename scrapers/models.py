@@ -1,5 +1,7 @@
+import re
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List, Dict
+from config import config
 
 
 @dataclass
@@ -28,7 +30,7 @@ class ScrapedItem:
         if self.msrp_usd and self.msrp_mxn and self.max_allowed_mxn:
             pricing_details = (
                 f"\n💵 *MSRP Oficial:* ${self.msrp_usd:.2f} USD (~${self.msrp_mxn:,.0f} MXN)"
-                f"\n🎯 *Precio Máx con Colchón (+15%):* ${self.max_allowed_mxn:,.0f} MXN"
+                f"\n🎯 *Precio Máx con Colchón (+{config.msrp_cushion_percent:.0f}%):* ${self.max_allowed_mxn:,.0f} MXN"
             )
 
         notes_display = f"\n📌 *Nota:* {self.notes}" if self.notes else ""
@@ -42,5 +44,28 @@ class ScrapedItem:
             f"{pricing_details}"
             f"{seller_display}"
             f"{notes_display}\n\n"
-            f"🔗 *Enlace de compra directa:*\n{self.url}"
+            f"🔗 *Enlace:* {self.url}"
         )
+
+    def get_action_buttons(self) -> List[List[Dict[str, str]]]:
+        """
+        Genera botones interactivos de acción rápida (Telegram Inline Keyboard).
+        Para Amazon, crea un enlace directo de adición instantánea al carrito / 1-Click.
+        """
+        buttons: List[List[Dict[str, str]]] = []
+
+        if "amazon" in self.store.lower():
+            match = re.search(r"(?:/dp/|/gp/product/|asin=)([A-Z0-9]{10})", self.url, re.IGNORECASE)
+            if match:
+                asin = match.group(1).upper()
+                # URL especial de adición instantánea al carrito (inicia checkout rápido)
+                direct_cart_url = f"https://www.amazon.com.mx/gp/aws/cart/add.html?ASIN.1={asin}&Quantity.1=1"
+                product_url = f"https://www.amazon.com.mx/dp/{asin}?th=1&psc=1"
+
+                buttons.append([{"text": "⚡ COMPRAR AHORA (DIRECT 1-CLICK)", "url": direct_cart_url}])
+                buttons.append([{"text": "📱 Abrir en App de Amazon", "url": product_url}])
+                return buttons
+
+        # Botón por defecto para Costco o tiendas generales
+        buttons.append([{"text": f"🛒 Ir a {self.store}", "url": self.url}])
+        return buttons

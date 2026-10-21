@@ -18,6 +18,8 @@ Este documento mantiene un registro cronológico del progreso, decisiones tomada
 - Implementación del módulo de precios dinámicos `scrapers/pricing.py` con tabla oficial de MSRPs en USD para todas las categorías (ETB, Booster Box, UPC, Blisters, Tins, etc.), consulta y caché del tipo de cambio USD/MXN en tiempo real, y cálculo automático con colchón porcentual configurable actualizado al +25% (`MSRP_CUSHION_PERCENT=25.0`), estableciendo el tope de alerta para ETBs en ~$1,153 MXN para capturar compras ventajosas en $1,100 MXN.
 - Regla estricta de idioma implementada en `config.py`, `scrapers/amazon.py` y `scrapers/costco.py`: filtro que descarta automáticamente cualquier producto o carta en idioma Español (`español`, `spanish`, `castellano`, etc.), garantizando alertas exclusivas para cartas Pokémon TCG en idioma Inglés.
 - Extracción precisa de vendedor/remitente en Amazon México (`extract_amazon_seller_info`) y filtro estricto `AMAZON_ONLY_OFFICIAL_SELLER=true` ajustado para garantizar alertas exclusivamente de productos vendidos/enviados específicamente por Amazon México (descartando revendedores terceros e importaciones de Amazon EE.UU.).
+- Integración de botones interactivos Inline Keyboard en Telegram (`alerts/notifier.py`) con URLs Direct 1-Click (`scrapers/models.py`) que permiten añadir al carrito y abrir checkout instantáneo en la App oficial de Amazon con 1 solo toque.
+- Verificación exitosa en vivo del envío de botones interactivos mediante `test_alert.py`.
 
 **Qué está en progreso:**
 - Monitoreo continuo 24/7 en la VM de Google Cloud Platform (GCP).

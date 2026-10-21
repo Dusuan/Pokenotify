@@ -18,10 +18,15 @@ def send_test_notification() -> bool:
         f"⏱️ Intervalo base: {config.check_interval}s\n"
         f"💰 MSRP Máx: ${config.max_msrp_price:,.2f} MXN\n"
         f"📦 ASINs de Amazon monitoreados: {len(config.amazon_asins)}\n\n"
-        "El bot está activo y listo para alertarte en cuanto detecte stock a precio de lista."
+        "⚡ *Función Direct 1-Click Link Activada:*\n"
+        "Al detectar stock a MSRP, el botón inferior agregará el producto a tu cuenta y te llevará directo al checkout."
     )
-    logger.info("Enviando mensaje de prueba de notificación...")
-    success = dispatch_alert(test_msg)
+    test_buttons = [
+        [{"text": "⚡ PROBAR BOTÓN 1-CLICK (AMAZON)", "url": "https://www.amazon.com.mx"}],
+        [{"text": "📦 Ver Repositorio Pokenotify", "url": "https://github.com/Dusuan/Pokenotify"}]
+    ]
+    logger.info("Enviando mensaje de prueba de notificación con botones interactivos...")
+    success = dispatch_alert(test_msg, buttons=test_buttons)
     if success:
         logger.info("Mensaje de prueba enviado exitosamente.")
     else:
